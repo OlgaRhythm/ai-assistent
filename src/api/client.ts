@@ -17,21 +17,111 @@ export class ApiError extends Error {
   }
 }
 
+// The backend has no structured error codes — every failure (validation,
+// ML-service errors, network issues) surfaces as a plain-text "error" string
+// or an "errors" array of class-validator constraint messages. We match on
+// known substrings to turn those into something a user can act on. Order
+// matters: more specific checks must come before generic fallbacks.
+const KNOWN_ERROR_PATTERNS: Array<{ test: RegExp; message: string }> = [
+  // class-validator messages from SupportRequestDto (POST /support)
+  {
+    test: /message must be longer than or equal to 3 characters/i,
+    message: "Your message is too short — please enter at least 3 characters.",
+  },
+  {
+    test: /message must be shorter than or equal to 300 characters/i,
+    message: "Your message is too long — please keep it under 300 characters.",
+  },
+  {
+    test: /message should not be empty/i,
+    message: "Please enter a message before sending.",
+  },
+  {
+    test: /orderId must be an integer/i,
+    message: "The selected order is invalid. Please pick an order from the list again.",
+  },
+  {
+    test: /userId (must be an integer|should not be empty)/i,
+    message: "Your user ID is invalid. Please check it in Settings.",
+  },
+  {
+    test: /sessionId (must be an integer|should not be empty)/i,
+    message: "Your session ID is invalid. Please start a new conversation or check it in Settings.",
+  },
+  // GET /orders custom validation (support.controller.ts)
+  {
+    test: /positive integer userId is required/i,
+    message: "Please set a valid user ID in Settings to load orders.",
+  },
+  // ML service rejected the text as non-English (FastAPI AppError, surfaces
+  // as a generic axios 422 by the time it reaches the frontend)
+  {
+    test: /request failed with status code 422/i,
+    message:
+      "The assistant currently only understands English. Please rephrase your message in English and try again.",
+  },
+  // ML service unreachable
+  {
+    test: /econnrefused/i,
+    message: "The AI assistant service is currently unavailable. Please try again in a moment.",
+  },
+  {
+    test: /(socket hang up|econnreset|remote end closed connection)/i,
+    message: "The connection to the AI assistant was interrupted. Please try again.",
+  },
+  {
+    test: /timed? ?out/i,
+    message: "The AI assistant is taking too long to respond. Please try again in a moment.",
+  },
+  // support.service.ts / gateway.service.ts explicit validation of ML output
+  {
+    test: /ML service returned an empty answer/i,
+    message: "The assistant couldn't come up with an answer this time. Please try rephrasing your message.",
+  },
+  {
+    test: /ML service returned invalid (classifier metadata|preprocessing result)/i,
+    message: "The assistant had trouble processing your message. Please try again.",
+  },
+  // any other non-2xx from the ML service bubbling up through axios
+  {
+    test: /request failed with status code \d+/i,
+    message: "The assistant ran into a problem answering. Please try again.",
+  },
+];
+
+function toFriendlyMessage(raw: string, status: number): string {
+  for (const { test, message } of KNOWN_ERROR_PATTERNS) {
+    if (test.test(raw)) return message;
+  }
+  if (status >= 500) {
+    return "Something went wrong on the assistant's side. Please try again.";
+  }
+  if (status >= 400) {
+    return "That request couldn't be processed. Please check your input and try again.";
+  }
+  return raw;
+}
+
 function extractErrorMessage(details: unknown, status: number): string {
+  let raw: string | undefined;
+
   if (details && typeof details === "object") {
     if ("error" in details && typeof details.error === "string") {
-      return details.error;
-    }
-    if ("errors" in details && Array.isArray(details.errors)) {
+      raw = details.error;
+    } else if ("errors" in details && Array.isArray(details.errors)) {
       const messages = details.errors.flatMap((constraints) =>
         constraints && typeof constraints === "object"
           ? Object.values(constraints as Record<string, string>)
           : [],
       );
-      if (messages.length > 0) return messages.join("; ");
+      if (messages.length > 0) raw = messages.join("; ");
     }
   }
-  return `The server responded with an error (${status}).`;
+
+  if (raw === undefined) {
+    return `The server responded with an error (${status}).`;
+  }
+  return toFriendlyMessage(raw, status);
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
