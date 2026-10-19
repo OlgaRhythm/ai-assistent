@@ -55,6 +55,54 @@ npm run dev
 Если backend работает на другом порту/хосте, поменяйте адреса в
 `server.proxy` в `vite.config.ts`.
 
+## Запуск в Docker
+
+Фронтенд собирается в статику и раздаётся через nginx, который также
+проксирует `/support`, `/orders`, `/hello` на backend — адрес backend'а
+настраивается переменной `BACKEND_URL` (подставляется в `nginx.conf.template`
+встроенным envsubst-механизмом образа `nginx`).
+
+Самостоятельный запуск (backend уже работает на хосте, например через
+`npm run dev` или свой `docker-compose.yml`):
+
+```bash
+docker compose up -d --build
+```
+
+Приложение откроется на `http://localhost:8080`, обращается к backend на
+`http://host.docker.internal:5005` (значение по умолчанию в
+`docker-compose.yml`).
+
+### Запуск всего стека сразу (frontend + backend + ML-сервис)
+
+В родительской папке, где лежат все три репозитория как соседние директории
+(`Market_AI_assistent_backend`, [`ai-assistant`](https://gitlab.com/Elitra/ai-assistant),
+`ai-assistent-frontend`), есть общий `docker-compose.yml`, который поднимает
+все три сервиса в одной Docker-сети и связывает их по именам сервисов:
+
+```
+ai-assistent/
+├── docker-compose.yml          # оркестратор всего стека
+├── Market_AI_assistent_backend/
+├── ai-assistant/                # ML-сервис (FastAPI + Ollama-клиент)
+└── ai-assistent-frontend/
+```
+
+```bash
+cd ai-assistent   # родительская папка
+docker compose up -d --build
+```
+
+Поднимутся:
+- `frontend` → `http://localhost:8080`
+- `backend` → `http://localhost:5005`
+- `ml` → `http://localhost:8000`
+
+Ollama не контейнеризована — ML-сервис обращается к ней по адресу
+`OLLAMA_BASE_URL` (по умолчанию удалённый адрес коллеги; переопределяется
+переменной окружения перед запуском, если нужно использовать локальную
+Ollama: `OLLAMA_BASE_URL=http://host.docker.internal:11434 docker compose up -d`).
+
 ## Переменные окружения
 
 См. `.env.example`. `VITE_API_BASE_URL` можно оставить пустым — тогда запросы
