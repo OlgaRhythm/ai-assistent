@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
 
+    container_name: ai-assistent-frontend
     image: ai-assistent-frontend:latest
     restart: unless-stopped
 
