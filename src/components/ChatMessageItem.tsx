@@ -23,6 +23,9 @@ export function ChatMessageItem({
     return (
       <li className={`message message--system message--${message.variant}`}>
         <span className="bubble bubble--system">{message.text}</span>
+        {message.traceId && (
+          <span className="message__trace-id">Trace ID: {message.traceId}</span>
+        )}
       </li>
     );
   }
@@ -31,7 +34,7 @@ export function ChatMessageItem({
     <li className={`message message--${message.role}`}>
       <span className={`bubble bubble--${message.role}`}>{message.text}</span>
       {message.role === "assistant" && message.technical && (
-        <TechnicalDetails technical={message.technical} />
+        <TechnicalDetails technical={message.technical} traceId={message.traceId} />
       )}
       {message.role === "assistant" && message.needsOrderId && (
         <OrderSelect

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ApiError, sendSupportMessage } from "./api/client";
+import { ApiError, generateTraceId, sendSupportMessage } from "./api/client";
 import { ResponseType } from "./api/types";
 import { ChatWindow } from "./components/ChatWindow";
 import { MessageInput } from "./components/MessageInput";
@@ -36,16 +36,15 @@ function App() {
 
   async function handleSend(text: string, orderIdOverride?: number) {
     const orderId = orderIdOverride ?? selectedOrderId;
+    const traceId = generateTraceId();
     addMessage({ id: createMessageId(), role: "user", text });
     setIsSending(true);
 
     try {
-      const response = await sendSupportMessage({
-        userId,
-        sessionId,
-        message: text,
-        orderId,
-      });
+      const response = await sendSupportMessage(
+        { userId, sessionId, message: text, orderId },
+        traceId,
+      );
 
       addMessage({
         id: createMessageId(),
@@ -53,13 +52,14 @@ function App() {
         text: response.text,
         technical: response.technical,
         needsOrderId: response.type === ResponseType.ORDERINFOREQUEST,
+        traceId,
       });
     } catch (error) {
       const text =
         error instanceof ApiError
           ? error.message
           : "Unexpected error while sending the message.";
-      addMessage({ id: createMessageId(), role: "system", text, variant: "error" });
+      addMessage({ id: createMessageId(), role: "system", text, variant: "error", traceId });
     } finally {
       setIsSending(false);
     }

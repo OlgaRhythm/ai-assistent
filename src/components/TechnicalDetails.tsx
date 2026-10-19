@@ -2,15 +2,18 @@ import type { SupportTechnicalInfo } from "../api/types";
 
 interface TechnicalDetailsProps {
   technical: SupportTechnicalInfo;
+  traceId: string;
 }
 
-export function TechnicalDetails({ technical }: TechnicalDetailsProps) {
+export function TechnicalDetails({ technical, traceId }: TechnicalDetailsProps) {
   const { classifier, generator, timings_ms: timings } = technical;
 
   return (
     <details className="technical-details">
       <summary>Technical details</summary>
       <dl>
+        <dt>Trace ID</dt>
+        <dd className="technical-details__trace-id">{traceId}</dd>
         {classifier && (
           <>
             <dt>Classifier</dt>

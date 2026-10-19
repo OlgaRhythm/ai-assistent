@@ -128,8 +128,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
-      headers: { "Content-Type": "application/json" },
       ...init,
+      headers: { "Content-Type": "application/json", ...init?.headers },
     });
   } catch (cause) {
     throw new ApiError(
@@ -157,11 +157,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
+// Correlates one exchange across frontend/backend/ML-service logs — sent as
+// the X-Trace-Id header and shown in the UI (Technical details / error
+// messages) so a report can be grepped for across all three services.
+export function generateTraceId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export function sendSupportMessage(
   payload: SupportRequest,
+  traceId: string,
 ): Promise<SupportResponse> {
   return request<SupportResponse>("/support", {
     method: "POST",
+    headers: { "X-Trace-Id": traceId },
     body: JSON.stringify(payload),
   });
 }

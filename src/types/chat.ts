@@ -12,10 +12,12 @@ export type ChatMessage =
       text: string;
       technical?: SupportTechnicalInfo;
       needsOrderId?: boolean;
+      traceId: string;
     }
   | {
       id: string;
       role: "system";
       text: string;
       variant: "error" | "info";
+      traceId?: string;
     };
