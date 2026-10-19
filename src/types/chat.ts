@@ -19,5 +19,4 @@ export type ChatMessage =
       role: "system";
       text: string;
       variant: "error" | "info";
-      traceId?: string;
     };

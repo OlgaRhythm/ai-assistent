@@ -59,7 +59,7 @@ function App() {
         error instanceof ApiError
           ? error.message
           : "Unexpected error while sending the message.";
-      addMessage({ id: createMessageId(), role: "system", text, variant: "error", traceId });
+      addMessage({ id: createMessageId(), role: "system", text, variant: "error" });
     } finally {
       setIsSending(false);
     }

@@ -23,9 +23,6 @@ export function ChatMessageItem({
     return (
       <li className={`message message--system message--${message.variant}`}>
         <span className="bubble bubble--system">{message.text}</span>
-        {message.traceId && (
-          <span className="message__trace-id">Trace ID: {message.traceId}</span>
-        )}
       </li>
     );
   }
