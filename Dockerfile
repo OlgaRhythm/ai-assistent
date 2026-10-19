@@ -1,22 +1,43 @@
-FROM node:22-bookworm-slim AS build
+# syntax=docker/dockerfile:1
+
+# Этап 1: установка зависимостей
+FROM node:22-alpine AS deps
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json package-lock.json ./
 RUN npm ci
 
+
+# Этап 2: сборка
+FROM node:22-alpine AS builder
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
 RUN npm run build
 
 
-FROM nginx:1.27-alpine
+# Этап 3: runtime
+FROM node:22-alpine AS runtime
 
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+WORKDIR /app
 
-# Overridable at runtime (see docker-compose.yml). Used by nginx to proxy
-# /support, /orders, /hello to the backend — substituted into
-# default.conf.template by the nginx image's built-in envsubst entrypoint.
-ENV BACKEND_URL=http://host.docker.internal:5005
+ENV NODE_ENV=production
 
-EXPOSE 80
+COPY package.json package-lock.json ./
+
+RUN npm ci --include=dev
+
+COPY --chown=node:node --from=builder /app/dist ./dist
+COPY --chown=node:node --from=builder /app/vite.config.ts ./vite.config.ts
+
+RUN chown -R node:node /app
+
+USER node
+
+EXPOSE 5173
+
+CMD ["npx", "vite", "preview", "--host", "0.0.0.0", "--port", "5173"]
