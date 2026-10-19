@@ -1,11 +1,35 @@
 services:
   frontend:
-    build: .
-    container_name: ai-assistent-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: ai-assistent-frontend:latest
     restart: unless-stopped
+
     ports:
-      - "8080:80"
+      - "${FRONTEND_PORT:-5173}:5173"
+
     environment:
-      BACKEND_URL: http://host.docker.internal:5005
+      BACKEND_URL: "${BACKEND_URL:-http://host.docker.internal:5005}"
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - "wget -q -O /dev/null http://127.0.0.1:5173/ || exit 1"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    security_opt:
+      - no-new-privileges:true
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

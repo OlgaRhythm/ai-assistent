@@ -1,7 +1,14 @@
 node_modules
 dist
-dist-ssr
 .git
+.github
+.vscode
+.idea
+
 .env
-*.log
+.env.*
+!.env.example
+
+npm-debug.log*
 .DS_Store
+coverage
