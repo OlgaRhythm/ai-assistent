@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ChatMessage } from "../types/chat";
 import { ChatMessageItem } from "./ChatMessageItem";
+import { TypingIndicator } from "./TypingIndicator";
 
 interface ChatWindowProps {
   messages: ChatMessage[];
@@ -9,6 +10,7 @@ interface ChatWindowProps {
   onOrderChange: (orderId: number | undefined) => void;
   onOrderApply: (orderId: number) => void;
   disabled: boolean;
+  isWaitingForReply: boolean;
 }
 
 export function ChatWindow({
@@ -18,12 +20,13 @@ export function ChatWindow({
   onOrderChange,
   onOrderApply,
   disabled,
+  isWaitingForReply,
 }: ChatWindowProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages.length, isWaitingForReply]);
 
   return (
     <div className="chat-window">
@@ -39,6 +42,7 @@ export function ChatWindow({
             disabled={disabled}
           />
         ))}
+        {isWaitingForReply && <TypingIndicator />}
       </ul>
       <div ref={bottomRef} />
     </div>

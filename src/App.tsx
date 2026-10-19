@@ -105,6 +105,7 @@ function App() {
         onOrderChange={setSelectedOrderId}
         onOrderApply={handleApplyOrder}
         disabled={isSending}
+        isWaitingForReply={isSending}
       />
 
       <MessageInput onSend={handleSend} disabled={isSending} />
