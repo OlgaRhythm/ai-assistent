@@ -1,6 +1,20 @@
+# Carries the frontend's X-Trace-Id header into the access log, so a
+# request can be correlated with the same trace id in backend/ML-service
+# logs (see src/api/client.ts generateTraceId()).
+log_format traced '$remote_addr [$time_iso8601] "$request" $status $body_bytes_sent '
+                   'trace=$http_x_trace_id rt=${request_time}s urt=$upstream_response_time';
+
+# The healthcheck in docker-compose.yml pings "/" from inside the container
+# (127.0.0.1) every 30s — that's not real traffic, so keep it out of the log.
+map $remote_addr $loggable {
+    127.0.0.1 0;
+    default   1;
+}
+
 server {
     listen 80;
     server_name _;
+    access_log /var/log/nginx/access.log traced if=$loggable;
 
     root /usr/share/nginx/html;
     index index.html;
